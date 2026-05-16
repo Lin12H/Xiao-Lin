@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自我认知</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", sans-serif;
+        }
+        body {
+            height: 100vh;
+            background: #000;
+            overflow: hidden;
+        }
+        .blessing-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+        }
+        .blessing-word {
+            position: absolute;
+            color: #fff;
+            font-size: clamp(12px, 2.5vw, 18px);
+            opacity: 0;
+            white-space: nowrap;
+            transition: opacity 0.4s ease;
+            padding: 5px;
+        }
+        .blessing-word.emphasis {
+            font-size: clamp(18px, 4vw, 24px);
+            font-weight: bold;
+            padding: 8px;
+            color: #ff3333; /* 放大字体设置为红色 */
+        }
+        .core-title {
+            font-size: clamp(22px, 6vw, 32px);
+            color: #ff4466;
+            font-weight: bold;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            padding: 10px;
+        }
+        .blessing-word.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="blessing-container" id="blessingContainer"></div>
+
+    <script>
+        // 核心标题（优先弹出）
+        const coreTitle = { text: "这些标签不定义你", class: "core-title" };
+
+        // 文字内容列表
+        const randomWords = [
+            {text: "丑"},
+            {text: "自卑"},
+            {text: "无趣", class: "emphasis"},
+            {text: "胆小"},
+            {text: "任性"},
+            {text: "笨拙"},
+            {text: "内向"},
+            {text: "事多"},
+            {text: "敏感"},
+            {text: "多疑"},
+            {text: "多疑", class: "emphasis"},
+            {text: "随便"},
+            {text: "敷衍"},
+            {text: "性格不好"},
+            {text: "人缘不好"},
+            {text: "傻"},
+            {text: "贱"},
+            {text: "社恐", class: "emphasis"},
+            {text: "阴暗"},
+            {text: "自甘堕落", class: "emphasis"},
+            {text: "爱乱想"},
+            {text: "爱哭"},
+            {text: "烦人"},
+            {text: "记仇"},
+            {text: "传播负能量"},
+            {text: "情商低", class: "emphasis"},
+            {text: "智商低", class: "emphasis"},
+            {text: "不讲理"},
+            {text: "穷"},
+            {text: "懒"},
+            {text: "爱磨蹭"},
+            {text: "拖拉"},
+            {text: "没耐心"},
+            {text: "学习不好"},
+            {text: "优柔寡断"},
+            {text: "不懂拒绝"},
+            {text: "讨好型人格"},
+            {text: "异想天开"},
+            {text: "过于敏感", class: "emphasis"},
+            {text: "幼稚"},
+            {text: "怕事"},
+            {text: "爱抱怨"},
+            {text: "玻璃心"},
+            {text: "冲动"},
+            {text: "自私"},
+            {text: "脸皮薄"},
+            {text: "三分钟热度"},
+            {text: "冷漠"},
+            {text: "虚伪"},
+            {text: "逃避问题"},
+            {text: "容易紧张"},
+            {text: "执行力差"},
+            {text: "喜怒无常"},
+            {text: "懒散"},
+            {text: "摆烂", class: "emphasis"},
+            {text: "粗心"},
+            {text: "焦急"},
+            {text: "浮躁"},
+            {text: "心胸狭隘"},
+            {text: "疑神疑鬼"},
+            {text: "没有自信"},
+            {text: "太要面子"},
+            {text: "没主见"},
+            {text: "固执"},
+            {text: "孩子气"},
+            {text: "习惯性焦虑"},
+            {text: "没有安全感"},
+            {text: "沉默寡言"},
+            {text: "占有欲强"},
+            {text: "多愁善感"},
+            {text: "爱玩手机"},
+            {text: "做事慢"},
+            {text: "爱玩"},
+            {text: "挑食"},
+            {text: "偏激"},
+            {text: "爱哭"},
+            {text: "没魄力"},
+            {text: "小心眼"},
+            {text: "目光短浅"},
+            {text: "虚荣心强"},
+            {text: "太依赖人"},
+            {text: "有偏见"},
+            {text: "说话难听"},
+            {text: "脾气暴躁"},
+            {text: "愚昧无能", class: "emphasis"},
+            {text: "纠结"},
+            {text: "爱炫耀"},
+            {text: "不会说话"},
+            {text: "缺少主见"},
+            {text: "心口直快"},
+            {text: "自以为是"},
+            {text: "内耗"},
+            {text: "焦虑", class: "emphasis"},
+            {text: "嘴毒"},
+            {text: "脸大"},
+            {text: "瘦/胖"},
+            {text: "讨厌自己", class: "emphasis"}
+        ];
+
+        const container = document.getElementById('blessingContainer');
+        const existingPositions = [];
+
+        // 先显示核心标题
+        function showCoreTitle() {
+            const titleEl = document.createElement('div');
+            titleEl.className = `blessing-word ${coreTitle.class}`;
+            titleEl.textContent = coreTitle.text;
+            container.appendChild(titleEl);
+
+            setTimeout(() => {
+                const rect = titleEl.getBoundingClientRect();
+                existingPositions.push({
+                    left: rect.left,
+                    right: rect.right,
+                    top: rect.top,
+                    bottom: rect.bottom
+                });
+                titleEl.classList.add('show');
+                setTimeout(startRandomWords, 800);
+            }, 100);
+        }
+
+        // 检查新位置是否与已有文字碰撞
+        function isColliding(newRect) {
+            for (const pos of existingPositions) {
+                if (!(
+                    newRect.right < pos.left ||
+                    newRect.left > pos.right ||
+                    newRect.bottom < pos.top ||
+                    newRect.top > pos.bottom
+                )) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // 生成不碰撞的随机位置
+        function getSafePosition(wordEl) {
+            const containerRect = container.getBoundingClientRect();
+            const wordRect = wordEl.getBoundingClientRect();
+            const maxAttempts = 50;
+            let attempts = 0;
+
+            while (attempts < maxAttempts) {
+                const left = Math.random() * (containerRect.width - wordRect.width);
+                const top = Math.random() * (containerRect.height - wordRect.height);
+
+                const newRect = {
+                    left: containerRect.left + left,
+                    right: containerRect.left + left + wordRect.width,
+                    top: containerRect.top + top,
+                    bottom: containerRect.top + top + wordRect.height
+                };
+
+                if (!isColliding(newRect)) {
+                    return { left, top, rect: newRect };
+                }
+                attempts++;
+            }
+
+            return {
+                left: 20,
+                top: 20 + (existingPositions.length % 10) * 30,
+                rect: {
+                    left: containerRect.left + 20,
+                    right: containerRect.left + 20 + wordRect.width,
+                    top: containerRect.top + 20 + (existingPositions.length % 10) * 30,
+                    bottom: containerRect.top + 20 + (existingPositions.length % 10) * 30 + wordRect.height
+                }
+            };
+        }
+
+        // 随机弹出所有词语（无碰撞）
+        function startRandomWords() {
+            const shuffledWords = [...randomWords].sort(() => Math.random() - 0.5);
+            let wordIndex = 0;
+
+            const showNextWord = () => {
+                if (wordIndex >= shuffledWords.length) return;
+                const word = shuffledWords[wordIndex];
+                const wordEl = document.createElement('div');
+                wordEl.className = `blessing-word ${word.class || ""}`;
+                wordEl.textContent = word.text;
+
+                wordEl.style.opacity = "0";
+                container.appendChild(wordEl);
+
+                const safePos = getSafePosition(wordEl);
+                wordEl.style.left = `${safePos.left}px`;
+                wordEl.style.top = `${safePos.top}px`;
+
+                existingPositions.push(safePos.rect);
+
+                setTimeout(() => wordEl.classList.add('show'), 50);
+                wordIndex++;
+                wordEl.style.opacity = "";
+                setTimeout(showNextWord, 300 + Math.random() * 300);
+            };
+
+            showNextWord();
+        }
+
+        window.onload = showCoreTitle;
+    </script>
+</body>
+</html>
