@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>一份神秘礼物🎁</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{background:radial-gradient(1200px 600px at 50% 45%,rgba(255,255,255,.65),rgba(255,255,255,0)60%),radial-gradient(circle at 50% 45%,#fff4f7 0%,#c9eaff 100%);min-height:100vh;overflow:hidden;position:relative;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;-moz-text-size-adjust:100%!important}
+/* 核心修改：提示框初始隐藏，添加过渡效果 */
+.modal-backdrop{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(1200px 600px at 50% 45%,rgba(255,255,255,.65),rgba(255,255,255,0)60%),radial-gradient(circle at 50% 45%,#fff4f7 0%,#c9eaff 100%);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity 0.5s ease-out}
+.modal{background:#fff;border-radius:12px;width:85%;max-width:300px;padding:25px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.2);animation:popIn 0.5s ease}
+.titlebar{display:flex;align-items:center;justify-content:center;margin-bottom:15px}
+.icon{font-size:28px;margin-right:8px}
+.title{font-size:20px;font-weight:700;color:#333}
+.content{font-size:16px;color:#666;margin-bottom:25px;line-height:1.5}
+.btn{padding:10px 25px;border:none;border-radius:25px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.3s ease}
+.primary{background:#ff6b6b;color:#fff;outline:none}
+.popup{position:absolute;padding:12px 20px;border-radius:6px;box-shadow:0 3px 10px rgba(0,0,0,0.1);z-index:999;animation:popIn 0.2s ease,bounce 1s ease-in-out infinite alternate;cursor:move;display:flex;align-items:center;gap:6px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.05));width:fit-content}
+.popup .heart-icon{color:#ff4d4f;font-size:15px;animation:pulse 2s ease-in-out infinite}
+.popup .text{font-size:14px;font-weight:600;color:#333}
+.popup.bg-pink{background:linear-gradient(135deg,#fff0f6 0%,#ffe6f2 100%)}
+.popup.bg-blue{background:linear-gradient(135deg,#f0f9ff 0%,#e6f7ff 100%)}
+.popup.bg-yellow{background:linear-gradient(135deg,#fff9e6 0%,#fff3d7 100%)}
+.popup.bg-purple{background:linear-gradient(135deg,#f3e6ff 0%,#e9d7ff 100%)}
+@keyframes popIn{0%{transform:scale(0.8);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes bounce{0%{transform:translateY(0)}100%{transform:translateY(-7px)}}
+@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.1)}100%{transform:scale(1)}}
+
+/* 更多按钮样式 */
+.more-btn{width:38px;height:38px;border:2px solid #fff;border-radius:50%;font-size:13px;line-height:34px;text-align:center;bottom:60px;right:15px;background:rgba(0,0,0,.2);z-index:99999;display:none;position:fixed;color:#fff;text-decoration:none;cursor:pointer;padding:0;margin:0}
+.more-btn:hover{opacity:.9}
+</style>
+</head>
+<body>
+<div id="app">
+<!-- 提示框初始隐藏，内容加载完成后显示 -->
+<div class="modal-backdrop" id="start-backdrop">
+  <div class="modal">
+    <div class="titlebar">
+      <span class="icon">🎁</span>
+      <span class="title">神秘礼物</span>
+    </div>
+    <!-- 初始内容为空，由JS动态填充 -->
+    <div class="content" id="greeting-text"></div>
+    <div class="actions">
+      <button class="btn primary" id="confirm-btn" autofocus>确定</button>
+    </div>
+  </div>
+</div>
+<div id="popup-container"></div>
+</div>
+<audio id="bgMusic" preload="auto" loop><source src="static/2.mp3" type="audio/mpeg"></audio>
+<a href="" class="more-btn">更多</a>
+<script>
+// 动态获取"更多"按钮链接
+document.addEventListener('DOMContentLoaded', () => {
+    const moreLink = document.querySelector('.more-btn');
+    fetch('../domain.php')
+        .then(response => {
+            if (!response.ok) throw new Error(`请求异常：${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            if (data && data.success && typeof data.domain === 'string' && data.domain.trim()) {
+                moreLink.setAttribute('href', data.domain.trim());
+            }
+        })
+        .catch(err => {
+            console.log('动态链接获取失败：', err.message);
+        });
+});
+
+// 从URL参数获取收件人信息
+function getUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  return { id };
+}
+
+// 根据ID获取收件人姓名
+async function getRecipientInfo(id) {
+  try {
+    const response = await fetch(`get_recipient_info.php?id=${id}`);
+    if (!response.ok) throw new Error('网络响应异常');
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('获取收件人信息失败：', error);
+    // 失败时返回默认值
+    return {
+      success: true,
+      recipientName: "亲爱的",
+      suffix: "专属礼物"
+    };
+  }
+}
+
+// 初始化页面（核心优化：内容加载完成后再显示提示框）
+async function initPage() {
+  const urlParams = getUrlParams();
+  const id = urlParams.id;
+  const greetingText = document.getElementById('greeting-text');
+  const startBackdrop = document.getElementById('start-backdrop');
+
+  try {
+    if (id) {
+      // 有ID时请求个性化信息
+      const recipientInfo = await getRecipientInfo(id);
+      if (recipientInfo.success) {
+        // 个性化内容
+        greetingText.textContent = `${recipientInfo.recipientName}，您有一份${recipientInfo.suffix}，确定要打开吗？`;
+        document.title = `${recipientInfo.recipientName}的${recipientInfo.suffix}🎁`;
+      } else {
+        throw new Error('接口返回格式错误');
+      }
+    } else {
+      // 无ID时使用默认内容
+      greetingText.textContent = "亲爱的，您有一份神秘礼物，确定要打开吗？";
+    }
+  } catch (error) {
+    // 异常时强制使用默认值
+    console.error('初始化失败：', error);
+    greetingText.textContent = "亲爱的，您有一份神秘礼物，确定要打开吗？";
+  }
+
+  // 内容加载完成后，显示提示框（带过渡效果）
+  setTimeout(() => {
+    startBackdrop.style.opacity = '1';
+    startBackdrop.style.pointerEvents = 'auto';
+  }, 100); // 轻微延迟让过渡更自然
+}
+
+// 页面加载完成后初始化
+window.onload = function() {
+  initPage().then(() => {
+    const startBackdrop = document.getElementById("start-backdrop");
+    const confirmBtn = document.getElementById("confirm-btn");
+    const popupContainer = document.getElementById("popup-container");
+    const bgMusic = document.getElementById("bgMusic");
+    const moreBtn = document.querySelector('.more-btn');
+
+    let popupCount = 0;
+    const maxPopups = 50;
+    const popupInterval = 150;
+
+    // 温馨提示语数组
+    const messages = [
+      "你值得被世界温柔以待",
+      "别慌，我一直在你身边",
+      "再难的路，我们一起走",
+      "累了就歇一歇，我等你",
+      "你的笑容，是我见过的最美风景",
+      "要相信，一切都会好起来",
+      "照顾好自己，我很在乎你",
+      "别苛责自己，你已经很棒了",
+      "想你的时候，风都是甜的",
+      "好好吃饭，好好睡觉，好好爱自己",
+      "无论何时，你都不是一个人",
+      "你笑起来的样子，真的很好看",
+      "别害怕孤单，我陪你聊天",
+      "记得多穿衣服，别冻着",
+      "多喝水，别让我担心",
+      "早点休息，梦里有我哦",
+      "今天的你，也在闪闪发光",
+      "别熬夜，我会心疼",
+      "有我在，别怕",
+      "你是我生命里的光",
+      "要开心，因为你值得",
+      "别放弃，再坚持一下就好",
+      "我想你了，很想很想",
+      "你在我心里，永远是第一位",
+      "你的努力，我都看在眼里",
+      "慢慢来吧，我陪你慢慢来",
+      "你超棒的，别怀疑自己"
+    ];
+
+    // 弹窗背景色数组
+    const bgColors = ["pink", "blue", "yellow", "purple"];
+
+    // 随机选择数组元素
+    const getRandomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    // 创建弹窗
+    const createPopup = () => {
+      if (popupCount >= maxPopups && popupContainer.firstChild) {
+        popupContainer.firstChild.remove();
+        popupCount--;
+      }
+
+      const popup = document.createElement("div");
+      popup.className = "popup";
+      popup.classList.add(`bg-${getRandomItem(bgColors)}`);
+      popup.style.willChange = "transform, top, left";
+
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      const popupWidth = 150 + Math.random() * 100;
+      const popupHeight = 45 + Math.random() * 20;
+
+      popup.style.left = `${Math.random() * (windowWidth - popupWidth)}px`;
+      popup.style.top = `${Math.random() * (windowHeight - popupHeight)}px`;
+
+      popup.innerHTML = `<span class="heart-icon">💖 提示</span><span class="text">${getRandomItem(messages)}</span>`;
+
+      popupContainer.appendChild(popup);
+      popupCount++;
+      makeDraggable(popup);
+    };
+
+    // 使元素可拖拽
+    const makeDraggable = (element) => {
+      let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+      element.onmousedown = function(e) {
+        e.preventDefault();
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+      };
+
+      function elementDrag(e) {
+        e.preventDefault();
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        element.style.top = `${element.offsetTop - pos2}px`;
+        element.style.left = `${element.offsetLeft - pos1}px`;
+      }
+
+      function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+      }
+    };
+
+    // 确认按钮点击事件
+    confirmBtn.addEventListener("click", function() {
+      startBackdrop.style.opacity = "0";
+      setTimeout(() => {
+        startBackdrop.style.display = "none";
+      }, 300);
+
+      // 播放背景音乐
+      bgMusic.play().catch(() => {
+        alert("音乐播放需手动授权，点击页面任意位置即可播放～");
+        document.addEventListener("click", () => bgMusic.play(), { once: true });
+      });
+
+      // 开始创建弹窗
+      setInterval(createPopup, popupInterval);
+
+
+    });
+  });
+};
+
+// 合并到此处：时间戳hash功能（原有代码末尾添加）
+function addTimestampHash() {
+  const timestamp = Date.now();
+  window.location.hash = timestamp;
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", addTimestampHash);
+} else {
+  addTimestampHash();
+}
+</script>
+</body>
+</html>
