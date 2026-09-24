@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心理成就博物馆|剧情阅读版</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-main: #e0e0e0;
+            --text-sub: #a0a0a0;
+            --accent-red: #ff4d4d;
+            --accent-blue: #4da6ff;
+            --accent-purple: #b34dff;
+            --accent-gold: #ffd700;
+            --accent-green: #4dff88;
+            --accent-grey: #888888;
+            --accent-cyan: #00e5ff; /* 角色类型颜色 */
+            --reading-bg: #111;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Microsoft YaHei', serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 4rem;
+            overflow-x: hidden;
+        }
+
+        /* --- 博物馆界面样式 --- */
+        .header {
+            text-align: center;
+            margin: 4rem 0 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            background: linear-gradient(120deg, #fff, #888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--text-sub);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .filter-btn {
+            background: transparent;
+            border: 1px solid var(--card-border);
+            color: var(--text-sub);
+            padding: 0.5rem 1.2rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            background: rgba(255, 77, 77, 0.05);
+            box-shadow: 0 0 10px rgba(255, 77, 77, 0.1);
+        }
+
+        .achievement-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            max-width: 1400px;
+            padding: 0 2rem;
+        }
+
+        .achievement-card {
+            position: relative;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 2rem;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 200px;
+            cursor: pointer;
+        }
+
+        .achievement-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--card-border);
+            transition: background 0.3s ease;
+        }
+
+        .achievement-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .achievement-card:hover::before {
+            box-shadow: 0 0 15px currentColor;
+        }
+
+        /* 类型颜色 */
+        .type-story { color: var(--accent-red); }
+        .type-story::before { background: var(--accent-red); }
+        .type-status { color: var(--accent-blue); }
+        .type-status::before { background: var(--accent-blue); }
+        .type-philosophy { color: var(--accent-purple); }
+        .type-philosophy::before { background: var(--accent-purple); }
+        .type-ending { color: var(--accent-gold); }
+        .type-ending::before { background: var(--accent-gold); }
+        .type-secret { color: var(--accent-green); }
+        .type-secret::before { background: var(--accent-green); }
+        .type-role { color: var(--accent-cyan); }
+        .type-role::before { background: var(--accent-cyan); }
+        .type-default { color: var(--text-sub); }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .achievement-tag {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 600;
+        }
+
+        .achievement-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+
+        .achievement-desc {
+            font-size: 1rem;
+            color: var(--text-sub);
+            line-height: 1.6;
+            font-weight: 300;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* 隐藏成就 */
+        .card-hidden .achievement-name,
+        .card-hidden .achievement-desc {
+            filter: blur(6px);
+            user-select: none;
+            transition: filter 0.3s ease;
+        }
+        .card-hidden:hover .achievement-name,
+        .card-hidden:hover .achievement-desc {
+            filter: blur(0);
+        }
+        .hidden-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            color: var(--text-sub);
+            opacity: 0.2;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .achievement-card {
+            animation: fadeIn 0.6s ease-out backwards;
+        }
+
+        /* --- 剧情阅读器样式 (覆盖层) --- */
+        .reader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 3000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .reader-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* 暗角效果 */
+        .reader-overlay::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 50%, black 150%);
+            pointer-events: none;
+        }
+
+        .reader-content {
+            width: 90%;
+            max-width: 800px;
+            background: var(--reading-bg);
+            border: 1px solid #333;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            border-radius: 4px;
+            padding: 4rem 3rem;
+            position: relative;
+            transform: translateY(20px);
+            transition: transform 0.5s ease;
+            max-height: 80vh;
+            overflow-y: auto;
+            /* 隐藏滚动条但保留功能 */
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .reader-content::-webkit-scrollbar {
+            display: none;
+        }
+
+        .reader-overlay.active .reader-content {
+            transform: translateY(0);
+        }
+
+        .close-reader {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            border: none;
+            color: #666;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: color 0.3s;
+            z-index: 10;
+        }
+        .close-reader:hover { color: #fff; }
+
+        .reader-title {
+            font-size: 2.5rem;
+            color: var(--accent-gold);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 1rem;
+        }
+
+        .reader-text {
+            font-size: 1.25rem;
+            line-height: 2;
+            color: #dcdcdc;
+            text-align: justify;
+            min-height: 200px;
+        }
+
+        /* 光标闪烁 */
+        .cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background-color: var(--accent-gold);
+            animation: blink 1s step-end infinite;
+            vertical-align: text-bottom;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* 底部奖励栏 */
+        .reader-footer {
+            margin-top: 3rem;
+            border-top: 1px solid #333;
+            padding-top: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .reader-footer.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .reward-display {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255, 215, 0, 0.05);
+            padding: 10px 20px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .reward-icon { font-size: 1.5rem; }
+        .reward-text { font-size: 1.1rem; color: var(--accent-gold); font-weight: bold; }
+
+        .claim-btn {
+            padding: 10px 30px;
+            background: linear-gradient(45deg, var(--accent-gold), #ffa500);
+            border: none;
+            border-radius: 4px;
+            color: #000;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .claim-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+        }
+        .claim-btn:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .title { font-size: 2.5rem; }
+            .achievement-container { grid-template-columns: 1fr; }
+            .reader-content { padding: 2rem 1.5rem; width: 95%; }
+            .reader-title { font-size: 1.8rem; }
+            .reader-text { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1 class="title">心理成就博物馆</h1>
+        <div class="subtitle">Museum of Psychological Achievements</div>
+    </div>
+
+    <!-- 筛选器 -->
+    <div class="filters" id="filters">
+        <button class="filter-btn active" data-filter="all">全部</button>
+        <button class="filter-btn" data-filter="story">剧情</button>
+        <button class="filter-btn" data-filter="status">心理状态</button>
+        <button class="filter-btn" data-filter="philosophy">哲学</button>
+        <button class="filter-btn" data-filter="ending">结局</button>
+        <button class="filter-btn" data-filter="secret">隐藏</button>
+        <button class="filter-btn" data-filter="role">角色</button>
+    </div>
+
+    <div class="achievement-container" id="achievements"></div>
+
+    <!-- 剧情阅读器覆盖层 -->
+    <div class="reader-overlay" id="readerOverlay">
+        <button class="close-reader" onclick="closeReader()">×</button>
+        <div class="reader-content">
+            <div class="reader-title" id="r-title">标题</div>
+            <div class="reader-text" id="r-text"></div>
+
+            <div class="reader-footer" id="r-footer">
+                <div class="reward-display">
+                    <span class="reward-icon">💎</span>
+                    <span class="reward-text" id="r-reward">奖励内容</span>
+                </div>
+                <button class="claim-btn" id="r-claimBtn" onclick="claimReward()">领取奖励</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 完整的成就数据 (包含所有原有及新增条目)
+        const achievementsData = [
+            // --- 原有数据 (部分示例) ---
+            { "id": "jieu_yu", "name": "解语", "description": "你读懂了所有人的心事，却没人看懂你眼底的荒芜。", "type": "story", "hidden": false, "story": "你读懂了所有人的心事，却没人看懂你眼底的荒芜。\n\n在这漫长的旅途中，你选择沉默，将万千情绪化作一声叹息。你看着他们欢笑、哭泣、争吵、拥抱，像是在看一场没有剧本的默剧。你试图伸出援手，却发现你的手穿过了他们的身体——你只是一个观察者，一个被遗忘的幽灵。", "reward": "获得称号：[ 心灵捕手 ]", "claimed": false },
+            { "id": "gui_chen", "name": "归尘", "description": "你送了无数人归土，自己却连尘埃都不愿收留。", "type": "story", "hidden": false, "story": "你送了无数人归土，自己却连尘埃都不愿收留。\n\n风沙掩埋了过往，你依旧孑然一身，向着未知的远方前行。你记得每一个人的名字，记得他们临终前的嘱托，但你无法停下。你的脚步声在空旷的荒原上回响，那是你唯一的伴奏。", "reward": "获得道具：[ 旅行斗篷 ]", "claimed": false },
+            { "id": "zhi_san", "name": "执伞", "description": "你为众生遮风挡雨，雨停时，只剩你一人站在暴雨里。", "type": "story", "hidden": false, "story": "你为众生遮风挡雨，雨停时，只剩你一人站在暴雨里。\n\n伞下空无一人，雨水顺着伞骨滴落，敲打着孤独的心。你看着积水中的倒影，那张脸既熟悉又陌生。你问自己：这把伞，究竟是为谁而撑？", "reward": "获得皮肤：[ 雨中行者 ]", "claimed": false },
+            { "id": "pei_jue", "name": "配角", "description": "你成全了所有人的圆满，自己却永远是故事里的过客。", "type": "story", "hidden": false, "story": "你成全了所有人的圆满，自己却永远是故事里的过客。\n\n幕布落下，灯光熄灭，无人记得你的名字。主角们在聚光灯下接受鲜花与掌声，而你躲在阴影里，整理好行囊，准备前往下一个片场。", "reward": "获得成就点数：+50", "claimed": false },
+            { "id": "wu_sheng", "name": "无声", "description": "你喊过千万次救命，到最后，连回声都冻成了冰。", "type": "story", "hidden": false, "story": "你喊过千万次救命，到最后，连回声都冻成了冰。\n\n寒冷不仅冻结了声音，也冻结了希望。你张开嘴，喉咙里却发不出一丝声响。世界安静得可怕，你只能听见自己心跳的声音，越来越弱，越来越慢……", "reward": "获得特效：[ 寒冰光环 ]", "claimed": false },
+            { "id": "ran_jin", "name": "燃烬", "description": "你燃烧自己照亮他人，烧完之后，只剩一地无人问津的灰。", "type": "story", "hidden": false, "story": "你燃烧自己照亮他人，烧完之后，只剩一地无人问津的灰。\n\n火焰熄灭的那一刻，世界重归黑暗。你感到一阵轻松，终于不用再忍受灼烧的痛苦。只是，这灰烬之中，似乎还残留着一点点温度。", "reward": "获得道具：[ 余烬之心 ]", "claimed": false },
+            { "id": "huang_ye_gu_xing", "name": "荒野孤行", "description": "一人一刃，踏过无人问津的荒原。", "type": "exploration", "hidden": false, "story": "一人一刃，踏过无人问津的荒原。\n\n孤独是唯一的伴侣，风沙是最好的磨刀石。你不知道走了多久，也不知道要去哪里。你只知道，只要手中的刀还在，你就能一直走下去。", "reward": "获得武器：[ 荒野之刃 ]", "claimed": false },
+            { "id": "dai_ma_zhi_shen", "name": "代码之神", "description": "在0与1的洪流中，我即是规则。", "type": "secret", "hidden": true, "story": "在0与1的洪流中，我即是规则。\n\n你看见了世界的源代码。那些所谓的命运、因果、爱恨，不过是一行行冰冷的指令。你伸出手，试图修改其中的一个参数，却发现……", "reward": "获得称号：[ 系统管理员 ]", "claimed": false },
+            { "id": "shen_hai_qian_hang", "name": "深海潜航", "description": "在无光的深渊，听见远古的低语。", "type": "exploration", "hidden": true, "story": "在无光的深渊，听见远古的低语。\n\n那不是幻觉，是来自深渊底部的凝视。你感觉到有什么东西正在靠近，巨大的压力挤压着你的潜水艇。你听到了，那是旧日支配者的呼吸声。", "reward": "获得坐骑：[ 深海潜航器 ]", "claimed": false },
+            { "id": "xu_kong_di_yu", "name": "虚空低语", "description": "与不可名状之物对话，理智开始消融。", "type": "sanity", "hidden": true, "story": "与不可名状之物对话，理智开始消融。\n\n你触碰到了禁忌的知识。那些不可名状的几何图形在你脑海中旋转，你的认知开始崩塌。你终于明白了，所谓的真理，就是疯狂本身。", "reward": "获得技能：[ 虚空凝视 ]", "claimed": false },
+            { "id": "404", "name": "404", "description": "拼尽全力开启的是通往错误的门扉。", "type": "meta", "hidden": true, "story": "拼尽全力开启的是通往错误的门扉。\n\n这里本不该有路。你发现了一个世界的BUG，一个未被开发者填写的空白区域。你站在那里，看着周围虚无的像素，感到一阵莫名的恐惧。", "reward": "获得彩蛋：[ 错误的钥匙 ]", "claimed": false },
+            { "id": "ctrl_z", "name": "Ctrl+Z", "description": "这一次，选择归于沉寂。", "type": "meta", "hidden": true, "story": "这一次，选择归于沉寂。\n\n你撤销了所有操作，回到了原点。一切都没有发生过，所有的痛苦、喜悦、遗憾都烟消云散。但这真的是你想要的吗？", "reward": "获得道具：[ 时光沙漏 ]", "claimed": false },
+            { "id": "xiao_chou", "name": "小丑", "description": "娱乐众生，愚弄命运。", "type": "role", "hidden": false, "story": "娱乐众生，愚弄命运。\n\n你画上笑脸，掩饰内心的悲伤。你在舞台上翻滚、跳跃、摔倒，引得观众哄堂大笑。他们笑得前仰后合，却没人看见你面具下的泪水。", "reward": "获得皮肤：[ 小丑面具 ]", "claimed": false },
+            { "id": "jing_shen_fen_lie", "name": "精神分裂", "description": "就让另一个你来替你分担痛苦。", "type": "personality", "hidden": false, "story": "就让另一个你来替你分担痛苦。\n\n你的脑海中出现了另一个声音，它似乎更强大，更果断。它告诉你：把身体交给我吧，我来帮你承受这一切。你犹豫了，但最终还是点了点头。", "reward": "获得召唤物：[ 第二人格 ]", "claimed": false },
+            { "id": "yi_yu", "name": "抑郁", "description": "喧嚣吞没一切，求救无声无力。", "type": "status", "hidden": false, "story": "喧嚣吞没一切，求救无声无力。\n\n你陷入了深深的抑郁，无法自拔。世界变成了灰白色，所有的声音都变得遥远。你躺在床上，看着天花板，感觉身体正在一点点下沉，沉入无底的深渊。", "reward": "获得状态：[ 抑郁 ]", "claimed": false },
+            { "id": "ta_ren_ji_di_yu", "name": "他人即地狱", "description": "抱歉，我想活着。……我也是。", "type": "philosophy", "hidden": false, "story": "抱歉，我想活着。……我也是。\n\n他人即是地狱，你无法在这个充满恶意的社会中生存。你试图逃离，却发现无论走到哪里，都充满了审视的目光和恶意的评判。", "reward": "获得技能：[ 孤立 ]", "claimed": false },
+            { "id": "shang_di_yi_si", "name": "上帝已死", "description": "神？从未存在。", "type": "philosophy", "hidden": false, "story": "神？从未存在。\n\n你杀死了心中的神，成为了无神论者。你不再相信救赎，不再相信来世。你只相信手中的刀，和眼前的路。", "reward": "获得称号：[ 弑神者 ]", "claimed": false },
+            { "id": "xu_wu", "name": "虚无", "description": "通关之后，副本之外空无一人。", "type": "ending", "hidden": false, "story": "通关之后，副本之外空无一人。\n\n你发现世界是虚无的，一切都没有意义。所有的努力、挣扎、爱恨，都只是一串串冰冷的数据。你站在世界的尽头，看着那片虚无，感到前所未有的平静。", "reward": "获得结局：[ 虚无 ]", "claimed": false },
+            { "id": "na_xi_suo_si", "name": "纳西索斯", "description": "溺死在自己的眼眸里。", "type": "philosophy", "hidden": false, "story": "溺死在自己的眼眸里。\n\n你爱上了自己，最终因自恋而灭亡。你凝视着水中的倒影，那个倒影也在凝视着你。你伸出手，想要触碰它，却跌入了水中。", "reward": "获得称号：[ 纳西索斯 ]", "claimed": false },
+            { "id": "chuang_shi_shen", "name": "创世神", "description": "以血与骨，筑造独属你的伊甸园。", "type": "ending", "hidden": false, "story": "以血与骨，筑造独属你的伊甸园。\n\n你成为了创世神，创造了一个新的世界。你制定了规则，创造了生命。你坐在王座上，看着你的造物们繁衍生息。你感到无比的孤独，因为你是这个世界上唯一的神。", "reward": "获得称号：[ 创世神 ]", "claimed": false },
+            { "id": "liu_bai", "name": "留白", "description": "填满他人故事，自己人生只剩空白。", "type": "story", "hidden": false, "story": "填满他人故事，自己人生只剩空白。\n\n你成全了别人，却遗忘自己。你是一本写满他人故事的书，唯独没有自己的篇章。当合上书本的那一刻，你发现自己什么都不是。", "reward": "获得称号：[ 留白者 ]", "claimed": false },
+
+            // --- 新增数据 (角色类型) ---
+            { "id": "bei_wang_lu", "name": "备忘录", "description": "你记得别人所有喜好，自己却从未被谁认真记住。", "type": "role", "hidden": false, "story": "你记得别人所有喜好，自己却从未被谁认真记住。\n\n你是别人生活中的便利贴，用完即弃。你记得他不吃香菜，记得她怕黑，记得他所有的纪念日。可是当你消失时，没人记得你最后一次出现是在什么时候。", "reward": "获得道具：[ 记忆碎片 ]", "claimed": false },
+            { "id": "zhi_tong_yao", "name": "止痛药", "description": "你缓解了别人的疼痛，自己的煎熬却无人知晓。", "type": "role", "hidden": false, "story": "你缓解了别人的疼痛，自己的煎熬却无人知晓。\n\n你是他人的镇痛剂，副作用却全由自己承担。你看着他们从痛苦中解脱，露出久违的笑容，而你只能躲在角落里，独自舔舐伤口。", "reward": "获得称号：[ 治愈者 ]", "claimed": false },
+            { "id": "yue_guang", "name": "月光", "description": "你温柔了别人的黑夜，自己却永远清冷孤寂。", "type": "role", "hidden": false, "story": "你温柔了别人的黑夜，自己却永远清冷孤寂。\n\n你照亮了别人的路，却独自走在黑暗中。你像月亮一样，借来的光终究要还给太阳，剩下的只有无尽的寒冷和孤独。", "reward": "获得皮肤：[ 月光守护者 ]", "claimed": false },
+            { "id": "guo_qi_xin", "name": "过期信", "description": "你送达了别人的思念，自己的心事却无人签收。", "type": "role", "hidden": false, "story": "你送达了别人的思念，自己的心事却无人签收。\n\n你传递着温暖，自己却始终是局外人。看着信封被拆开，看着泪水滑落，你完成了使命，却把心留在了无人问津的邮筒里。", "reward": "获得道具：[ 未寄出的信 ]", "claimed": false },
+            { "id": "bei_jing_ban", "name": "背景板", "description": "你衬托了别人的光芒，自己却始终黯淡无名。", "type": "role", "hidden": false, "story": "你衬托了别人的光芒，自己却始终黯淡无名。\n\n你是舞台的布景，是故事里的路人甲。你站在聚光灯的边缘，看着主角享受鲜花与掌声，然后默默退场，没人会在意你的离开。", "reward": "获得称号：[ 最佳配角 ]", "claimed": false },
+            { "id": "bi_feng_gang", "name": "避风港", "description": "你收容了所有漂泊的人，自己却无处可依。", "type": "role", "hidden": false, "story": "你收容了所有漂泊的人，自己却无处可依。\n\n你是他人的港湾，自己却是一叶孤舟。你张开双臂拥抱每一个受伤的灵魂，却没人看见你身后那片空荡荡的海。", "reward": "获得家园：[ 避风港 ]", "claimed": false },
+            { "id": "chi_lai", "name": "迟来", "description": "你赶上了别人的所有结局，自己的开端却无人等候。", "type": "role", "hidden": false, "story": "你赶上了别人的所有结局，自己的开端却无人等候。\n\n你总是慢一步，错过了所有的开始。当你终于赶到时，故事已经落幕，人群已经散去，只留下一地狼藉和满身尘埃的你。", "reward": "获得被动：[ 迟钝 ]", "claimed": false },
+            { "id": "du_jiao_meng", "name": "独角梦", "description": "你参与了别人所有美梦，醒来时却只有自己一人。", "type": "role", "hidden": false, "story": "你参与了别人所有美梦，醒来时却只有自己一人。\n\n你闯入了他人的梦境，却无法在自己的梦里停留。你是那个永远在别人故事里客串的演员，却永远无法成为自己剧本的主角。", "reward": "获得技能：[ 入梦 ]", "claimed": false },
+            { "id": "wu_sheng_tan", "name": "无声叹", "description": "你安慰了别人所有不甘，自己的叹息却无人听见。", "type": "role", "hidden": false, "story": "你安慰了别人所有不甘，自己的叹息却无人听见。\n\n你听懂了所有的委屈，却没人听懂你的沉默。你像是一个情绪垃圾桶，吞噬了所有的负能量，直到自己再也装不下任何东西。", "reward": "获得Buff：[ 共情 ]", "claimed": false },
+            { "id": "duan_xian_qin", "name": "断弦琴", "description": "你奏响了别人的乐章，自己的旋律却再无人听。", "type": "role", "hidden": false, "story": "你奏响了别人的乐章，自己的旋律却再无人听。\n\n你为他人伴奏，自己却永远无法独奏。你的手指在琴弦上飞舞，弹奏着别人的喜怒哀乐，却弹不出自己心中的那首歌。", "reward": "获得乐器：[ 断弦琴 ]", "claimed": false },
+            { "id": "shou_ye_ren", "name": "守夜人", "description": "所谓的守夜，是在黎明到来前，先把自己燃成灰烬。", "type": "role", "hidden": false, "story": "所谓的守夜，是在黎明到来前，先把自己燃成灰烬。\n\n你守护着光明，自己却属于黑暗。你看着太阳升起，看着人们苏醒，然后像幽灵一样退回阴影里，等待下一个漫长的黑夜。", "reward": "获得称号：[ 守夜人 ]", "claimed": false },
+            { "id": "shi_huang_zhe", "name": "拾荒者", "description": "你捡回别人丢弃的希望，却发现那不过是早已过期的谎言。", "type": "role", "hidden": false, "story": "你捡回别人丢弃的希望，却发现那不过是早已过期的谎言。\n\n你珍视他人的垃圾，却找不到自己的宝藏。你像一只流浪狗，在世界的角落里翻找，试图拼凑出一个不存在的未来。", "reward": "获得技能：[ 拾荒 ]", "claimed": false },
+            { "id": "xin_shi", "name": "信使", "description": "你传递了千万次求救，最后才明白，收件人早已死去。", "type": "role", "hidden": false, "story": "你传递了千万次求救，最后才明白，收件人早已死去。\n\n你奔波于传递希望，却不知希望早已破灭。你看着手中那封永远无法送达的信，感到一阵荒谬的悲凉。", "reward": "获得称号：[ 悲剧信使 ]", "claimed": false },
+            { "id": "chen_mo_de_zheng_ren", "name": "沉默的证人", "description": "你目睹了所有罪恶，却只能在黑暗里，为自己的沉默陪葬。", "type": "role", "hidden": false, "story": "你目睹了所有罪恶，却只能在黑暗里，为自己的沉默陪葬。\n\n你知道真相，却选择了闭嘴。你告诉自己这无关紧要，直到罪恶蔓延到你的脚下，你才发现，沉默也是一种共谋。", "reward": "获得道具：[ 沉默徽章 ]", "claimed": false },
+            { "id": "gui_ling_zhe", "name": "归零者", "description": "你清空所有记忆，以为能重获新生，却发现世界早已为你归零。", "type": "role", "hidden": false, "story": "你清空所有记忆，以为能重获新生，却发现世界早已为你归零。\n\n你抹去了过去，却发现自己从未存在。你像一张被格式化的白纸，却发现这个世界根本不需要你写下任何字迹。", "reward": "获得结局：[ 归零 ]", "claimed": false }
+        ];
+
+        const typeMap = {
+            'story': '剧情',
+            'status': '心理',
+            'philosophy': '哲学',
+            'ending': '结局',
+            'secret': '隐藏',
+            'combat': '战斗',
+            'exploration': '探索',
+            'misc': '杂项',
+            'role': '角色',
+            'sin': '原罪',
+            'meta': 'Meta',
+            'personality': '人格',
+            'phobia': '恐惧',
+            'sanity': '理智'
+        };
+
+        const container = document.getElementById('achievements');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+
+        // 阅读器元素
+        const readerOverlay = document.getElementById('readerOverlay');
+        const rTitle = document.getElementById('r-title');
+        const rText = document.getElementById('r-text');
+        const rReward = document.getElementById('r-reward');
+        const rFooter = document.getElementById('r-footer');
+        const rClaimBtn = document.getElementById('r-claimBtn');
+
+        let currentId = null;
+        let typeInterval = null;
+
+        // 渲染函数
+        function renderAchievements(filterType) {
+            container.innerHTML = '';
+            const filteredData = filterType === 'all'
+                ? achievementsData
+                : achievementsData.filter(item => item.type === filterType);
+
+            filteredData.forEach((item, index) => {
+                const card = document.createElement('div');
+                let typeClass = 'type-default';
+                if (['story', 'ending', 'secret', 'philosophy', 'status', 'role'].includes(item.type)) {
+                    typeClass = `type-${item.type}`;
+                }
+                const hiddenClass = item.hidden ? 'card-hidden' : '';
+                const hiddenIcon = item.hidden ? '<div class="hidden-icon">?</div>' : '';
+                const delay = index * 0.05;
+
+                card.className = `achievement-card ${typeClass} ${hiddenClass}`;
+                card.style.animationDelay = `${delay}s`;
+
+                card.onclick = () => openReader(item.id);
+
+                card.innerHTML = `
+                    ${hiddenIcon}
+                    <div class="card-header">
+                        <span class="achievement-tag">${typeMap[item.type] || item.type}</span>
+                    </div>
+                    <div>
+                        <div class="achievement-name">${item.name}</div>
+                        <div class="achievement-desc">${item.description}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        renderAchievements('all');
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                renderAchievements(btn.dataset.filter);
+            });
+        });
+
+        // --- 阅读器逻辑 ---
+        function openReader(id) {
+            const ach = achievementsData.find(a => a.id === id);
+            if (!ach) return;
+
+            currentId = id;
+            rTitle.innerText = ach.name;
+            rReward.innerText = ach.reward;
+
+            // 重置状态
+            rText.innerHTML = '';
+            rFooter.classList.remove('show');
+            rClaimBtn.disabled = false;
+            rClaimBtn.innerText = "领取奖励";
+
+            if (ach.claimed) {
+                rClaimBtn.innerText = "已领取";
+                rClaimBtn.disabled = true;
+            }
+
+            readerOverlay.classList.add('active');
+
+            // 启动打字机效果
+            startTypewriter(ach.story || ach.description);
+        }
+
+        function closeReader() {
+            readerOverlay.classList.remove('active');
+            if (typeInterval) clearInterval(typeInterval);
+            currentId = null;
+        }
+
+        function startTypewriter(text) {
+            // 清理旧的定时器
+            if (typeInterval) clearInterval(typeInterval);
+
+            let i = 0;
+            // 将换行符转换为 <br>
+            const formattedText = text.replace(/\n/g, '<br>');
+
+            // 使用 cursor
+            rText.innerHTML = '<span class="cursor"></span>';
+
+            typeInterval = setInterval(() => {
+                if (i < formattedText.length) {
+                    // 插入字符到光标前
+                    const currentHTML = rText.innerHTML;
+                    const char = formattedText.charAt(i);
+
+                    // 简单处理：如果是 <br>，直接插入；否则插入字符
+                    if (formattedText.substr(i, 4) === '<br>') {
+                        rText.innerHTML = currentHTML.replace('<span class="cursor"></span>', '<br><span class="cursor"></span>');
+                        i += 4;
+                    } else {
+                        rText.innerHTML = currentHTML.replace('<span class="cursor"></span>', `${char}<span class="cursor"></span>`);
+                        i++;
+                    }
+
+                    // 自动滚动到底部
+                    const contentDiv = document.querySelector('.reader-content');
+                    contentDiv.scrollTop = contentDiv.scrollHeight;
+                } else {
+                    clearInterval(typeInterval);
+                    // 移除光标
+                    rText.innerHTML = rText.innerHTML.replace('<span class="cursor"></span>', '');
+                    // 显示底部奖励栏
+                    rFooter.classList.add('show');
+                }
+            }, 50); // 打字速度
+        }
+
+        function claimReward() {
+            if (currentId === null) return;
+            const ach = achievementsData.find(a => a.id === currentId);
+            if (ach && !ach.claimed) {
+                ach.claimed = true;
+                rClaimBtn.innerText = "领取成功！";
+                rClaimBtn.disabled = true;
+
+                setTimeout(() => {
+                    alert(`成功获得：${ach.reward}`);
+                    closeReader();
+                }, 500);
+            }
+        }
+
+        // 点击遮罩层关闭
+        readerOverlay.addEventListener('click', (e) => {
+            if (e.target === readerOverlay) closeReader();
+        });
+
+    </script>
+</body>
+</html>
